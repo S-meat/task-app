@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#7a2e2e">
+<title>ミートチーム 案件管理</title>
+<style>
+  :root {
+    --bg: #f6f3ef;
+    --card: #ffffff;
+    --ink: #2b2420;
+    --sub: #7b6f66;
+    --line: #e6ded6;
+    --brand: #7a2e2e;
+    --brand-ink: #ffffff;
+    --red: #c5221f;
+    --red-bg: #fce8e6;
+    --amber: #a56400;
+    --amber-bg: #fef3d6;
+    --blue: #1a5fb4;
+    --blue-bg: #e3edfb;
+    --gray-bg: #eeeae6;
+    --green: #1e7a3c;
+    --green-bg: #e3f3e8;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", sans-serif;
+    font-size: 16px; line-height: 1.5;
+    padding-bottom: calc(96px + env(safe-area-inset-bottom));
+  }
+  header {
+    position: sticky; top: 0; z-index: 10;
+    background: var(--brand); color: var(--brand-ink);
+    padding: 12px 16px 10px;
+  }
+  header h1 { margin: 0 0 8px; font-size: 18px; font-weight: 700; display: flex; justify-content: space-between; align-items: center; }
+  header h1 a { color: var(--brand-ink); font-size: 13px; font-weight: 400; opacity: .85; text-decoration: underline; }
+  .controls { display: flex; gap: 8px; }
+  .controls select {
+    flex: 1; font-size: 16px; padding: 8px 10px; border-radius: 10px; border: 0;
+    background: rgba(255,255,255,.95); color: var(--ink);
+  }
+  .tabs { display: flex; gap: 6px; margin-top: 8px; }
+  .tabs button {
+    flex: 1; padding: 7px 0; border-radius: 999px; border: 1px solid rgba(255,255,255,.5);
+    background: transparent; color: var(--brand-ink); font-size: 14px;
+  }
+  .tabs button.on { background: var(--brand-ink); color: var(--brand); font-weight: 700; }
+  main { padding: 12px 16px; max-width: 640px; margin: 0 auto; }
+  .summary { font-size: 13px; color: var(--sub); margin: 2px 0 10px; }
+  .group-title { font-size: 14px; font-weight: 700; color: var(--sub); margin: 18px 4px 6px; }
+  .card {
+    background: var(--card); border-radius: 14px; padding: 12px 14px; margin-bottom: 10px;
+    border: 1px solid var(--line); cursor: pointer;
+  }
+  .card:active { transform: scale(.99); }
+  .card .top { display: flex; gap: 8px; align-items: flex-start; }
+  .card .title { flex: 1; font-weight: 700; word-break: break-word; }
+  .card .id { font-size: 11px; color: var(--sub); }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .chip { font-size: 12px; padding: 2px 8px; border-radius: 999px; background: var(--gray-bg); white-space: nowrap; }
+  .st-進行中 { background: var(--blue-bg); color: var(--blue); }
+  .st-待ち { background: var(--amber-bg); color: var(--amber); }
+  .st-完了 { background: var(--green-bg); color: var(--green); }
+  .due-over { background: var(--red-bg); color: var(--red); font-weight: 700; }
+  .due-soon { background: var(--amber-bg); color: var(--amber); font-weight: 700; }
+  .next { margin-top: 6px; font-size: 14px; color: var(--ink); }
+  .next b { color: var(--sub); font-weight: 400; }
+  .meta { margin-top: 4px; font-size: 12px; color: var(--sub); }
+  .empty { text-align: center; color: var(--sub); padding: 40px 0; }
+  .fab {
+    position: fixed; right: 16px; bottom: calc(20px + env(safe-area-inset-bottom));
+    background: var(--brand); color: var(--brand-ink); border: 0; border-radius: 999px;
+    padding: 14px 22px; font-size: 16px; font-weight: 700; box-shadow: 0 4px 14px rgba(0,0,0,.25);
+  }
+  /* bottom sheet */
+  .backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 20; display: none; }
+  .sheet {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 21; display: none;
+    background: var(--card); border-radius: 18px 18px 0 0; max-height: 92vh; overflow-y: auto;
+    padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
+    max-width: 640px; margin: 0 auto;
+  }
+  .open .backdrop, .open .sheet { display: block; }
+  .sheet h2 { margin: 0 0 12px; font-size: 17px; }
+  label.f { display: block; font-size: 13px; color: var(--sub); margin: 12px 0 4px; }
+  input.f, select.f, textarea.f {
+    width: 100%; font-size: 16px; padding: 10px 12px; border: 1px solid var(--line);
+    border-radius: 10px; background: #fff; color: var(--ink); font-family: inherit;
+  }
+  textarea.f { min-height: 64px; resize: vertical; }
+  .seg { display: flex; flex-wrap: wrap; gap: 6px; }
+  .seg button {
+    flex: 1 1 18%; padding: 9px 0; border-radius: 10px; border: 1px solid var(--line);
+    background: #fff; font-size: 14px; color: var(--ink);
+  }
+  .seg button.on { background: var(--brand); color: var(--brand-ink); border-color: var(--brand); font-weight: 700; }
+  .actions { display: flex; gap: 10px; margin-top: 18px; }
+  .actions button { flex: 1; padding: 13px 0; border-radius: 12px; font-size: 16px; font-weight: 700; border: 0; }
+  .btn-main { background: var(--brand); color: var(--brand-ink); }
+  .btn-sub { background: var(--gray-bg); color: var(--ink); }
+  .btn-done { background: var(--green-bg); color: var(--green); width: 100%; padding: 11px 0; border-radius: 12px; border: 0; font-size: 15px; font-weight: 700; margin-top: 4px; }
+  .actions button:disabled { opacity: .5; }
+  .hidden { display: none !important; }
+  .toast {
+    position: fixed; left: 50%; bottom: calc(90px + env(safe-area-inset-bottom)); transform: translateX(-50%);
+    background: #2b2420; color: #fff; padding: 10px 16px; border-radius: 10px; font-size: 14px;
+    z-index: 30; opacity: 0; transition: opacity .2s; pointer-events: none; max-width: 90vw; text-align: center;
+  }
+  .toast.show { opacity: .95; }
+  .keybox { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px; margin-top: 20px; }
+  .loading { text-align: center; color: var(--sub); padding: 30px 0; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>ミートチーム 案件管理 <a id="sheetLink" href="#" target="_blank" rel="noopener" class="hidden">台帳を開く</a></h1>
+  <div class="controls">
+    <select id="whoSel" aria-label="表示する担当者"></select>
+  </div>
+  <div class="tabs">
+    <button id="tabOpen" class="on" type="button">進行中</button>
+    <button id="tabDone" type="button">最近完了</button>
+  </div>
+</header>
+
+<main>
+  <div id="summary" class="summary"></div>
+  <div id="list"><div class="loading">読み込み中…</div></div>
+  <div id="keyBox" class="keybox hidden">
+    <div style="font-weight:700;margin-bottom:6px">合言葉を入力してください</div>
+    <div style="font-size:13px;color:var(--sub)">チームで共有している合言葉です(この端末に保存されます)</div>
+    <input id="keyInput" class="f" type="password" autocomplete="off" style="margin-top:10px">
+    <div class="actions"><button class="btn-main" id="keySave" type="button">OK</button></div>
+  </div>
+</main>
+
+<button class="fab" id="fabNew" type="button">+ 新規登録</button>
+
+<div id="sheetWrap">
+  <div class="backdrop" id="backdrop"></div>
+  <div class="sheet" role="dialog" aria-modal="true">
+    <h2 id="sheetTitle">新規登録</h2>
+    <div id="fId" class="id" style="margin-top:-8px"></div>
+
+    <label class="f" for="fTitle">案件名 *</label>
+    <input class="f" id="fTitle" type="text" placeholder="例:冷凍庫のレイアウト変更">
+
+    <label class="f" for="fOwner">担当</label>
+    <select class="f" id="fOwner"></select>
+
+    <label class="f" for="fDue">期限</label>
+    <input class="f" id="fDue" type="date">
+
+    <label class="f">ステータス</label>
+    <div class="seg" id="fStatus"></div>
+
+    <div id="waitingWrap">
+      <label class="f" for="fWaiting">待ち相手(誰・何を待っているか)</label>
+      <input class="f" id="fWaiting" type="text" placeholder="例:上田さん、業者見積">
+    </div>
+
+    <label class="f" for="fNext">次の一手</label>
+    <textarea class="f" id="fNext" placeholder="例:来週までに配置案を作って上田さんに確認"></textarea>
+
+    <label class="f" for="fNote">備考</label>
+    <textarea class="f" id="fNote"></textarea>
+
+    <div id="doneBtnWrap" style="margin-top:16px"><button class="btn-done" id="btnDone" type="button">✅ 完了にする</button></div>
+
+    <div class="actions">
+      <button class="btn-sub" id="btnCancel" type="button">キャンセル</button>
+      <button class="btn-main" id="btnSave" type="button">保存</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<iframe name="gas_target" id="gas_target" class="hidden" title="送信用"></iframe>
+
+<script>
+/* ===== 設定(デプロイ後に書き換える) ===== */
+var GAS_URL = 'https://script.google.com/macros/s/AKfycbwx0nyNveKf9k_N1dEmtOk09lb97YJ7U3eVNELL1X8PuP0AgkV31gVifeqBHMosN-CkGw/exec';
+/* ======================================== */
+
+var STORE_WHO = 'taskapp_who';
+var STORE_KEY = 'taskapp_key';
+var OPEN_STATUSES = ['未着手', '進行中', '待ち'];
+
+var state = { data: null, tab: 'open', editing: null, status: '未着手', sending: false };
+
+function $(id) { return document.getElementById(id); }
+function store(k, v) {
+  try { if (v === undefined) return localStorage.getItem(k) || ''; localStorage.setItem(k, v); } catch (e) { return ''; }
+}
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+}
+function toast(msg) {
+  var t = $('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toast._t); toast._t = setTimeout(function () { t.classList.remove('show'); }, 2600);
+}
+
+/* ---------- 日付 ---------- */
+function dayNum(ymd) {
+  var p = String(ymd).split('-');
+  return Date.UTC(+p[0], +p[1] - 1, +p[2]) / 86400000;
+}
+function md(ymd) { var p = String(ymd).split('-'); return (+p[1]) + '/' + (+p[2]); }
+function dueInfo(t) {
+  if (!t.due) return { text: '期限なし', cls: '' };
+  if (t.status === '完了') return { text: '期限 ' + md(t.due), cls: '' };
+  var d = dayNum(t.due) - dayNum(state.data.today);
+  if (d < 0) return { text: '期限切れ ' + md(t.due) + '(' + (-d) + '日超過)', cls: 'due-over' };
+  if (d === 0) return { text: '今日まで', cls: 'due-soon' };
+  if (d <= 3) return { text: '期限 ' + md(t.due) + '(あと' + d + '日)', cls: 'due-soon' };
+  return { text: '期限 ' + md(t.due), cls: '' };
+}
+
+/* ---------- 読み込み(JSONP) ---------- */
+function loadList(silent) {
+  if (!silent) $('list').innerHTML = '<div class="loading">読み込み中…</div>';
+  var cb = 'cb_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+  var s = document.createElement('script');
+  var timer = setTimeout(function () { cleanup(); fail('読み込みに失敗しました(タイムアウト)'); }, 20000);
+  function cleanup() { clearTimeout(timer); try { delete window[cb]; } catch (e) { window[cb] = undefined; } if (s.parentNode) s.parentNode.removeChild(s); }
+  window[cb] = function (res) {
+    cleanup();
+    if (!res || !res.ok) {
+      if (res && res.error === 'AUTH') { showKeyBox(); return; }
+      fail('読み込みエラー:' + (res && res.error ? res.error : '不明'));
+      return;
+    }
+    $('keyBox').classList.add('hidden');
+    state.data = res.data;
+    setupSelectors();
+    render();
+  };
+  s.onerror = function () { cleanup(); fail('読み込みに失敗しました。電波状況を確認してください'); };
+  s.src = GAS_URL + '?action=list&key=' + encodeURIComponent(store(STORE_KEY)) + '&callback=' + cb + '&_=' + Date.now();
+  document.body.appendChild(s);
+}
+function fail(msg) {
+  $('list').innerHTML = '<div class="empty">' + esc(msg) + '<br><br><button class="btn-sub" style="padding:10px 18px;border-radius:10px;border:0" onclick="loadList()">再読み込み</button></div>';
+}
+function showKeyBox() {
+  $('list').innerHTML = '';
+  $('summary').textContent = '';
+  $('keyBox').classList.remove('hidden');
+}
+
+/* ---------- 一覧 ---------- */
+function setupSelectors() {
+  var d = state.data;
+  var who = store(STORE_WHO) || '__all__';
+  var html = '<option value="__all__">全員の案件</option>';
+  for (var i = 0; i < d.members.length; i++) {
+    html += '<option value="' + esc(d.members[i]) + '">' + esc(d.members[i]) + ' の案件</option>';
+  }
+  $('whoSel').innerHTML = html;
+  $('whoSel').value = (who === '__all__' || d.members.indexOf(who) !== -1) ? who : '__all__';
+
+  var oh = '<option value="">(未設定)</option>';
+  for (var j = 0; j < d.members.length; j++) oh += '<option value="' + esc(d.members[j]) + '">' + esc(d.members[j]) + '</option>';
+  $('fOwner').innerHTML = oh;
+
+  var sh = '';
+  for (var k = 0; k < d.statuses.length; k++) {
+    sh += '<button type="button" data-s="' + esc(d.statuses[k]) + '">' + esc(d.statuses[k]) + '</button>';
+  }
+  $('fStatus').innerHTML = sh;
+
+  if (d.sheetUrl) { $('sheetLink').href = d.sheetUrl; $('sheetLink').classList.remove('hidden'); }
+}
+
+function render() {
+  var d = state.data; if (!d) return;
+  var who = $('whoSel').value;
+  var rows = d.tasks.filter(function (t) {
+    var inTab = state.tab === 'open' ? OPEN_STATUSES.indexOf(t.status) !== -1 : t.status === '完了';
+    return inTab && (who === '__all__' || t.owner === who);
+  });
+
+  if (state.tab === 'open') {
+    rows.sort(function (a, b) {
+      if (!a.due && !b.due) return 0; if (!a.due) return 1; if (!b.due) return -1;
+      return a.due < b.due ? -1 : a.due > b.due ? 1 : 0;
+    });
+    var over = 0, soon = 0;
+    rows.forEach(function (t) { var c = dueInfo(t).cls; if (c === 'due-over') over++; else if (c === 'due-soon') soon++; });
+    $('summary').textContent = rows.length + '件' + (over ? ' / 期限切れ ' + over : '') + (soon ? ' / 期限間近 ' + soon : '');
+  } else {
+    rows.sort(function (a, b) { return a.done < b.done ? 1 : -1; });
+    $('summary').textContent = '直近7日の完了 ' + rows.length + '件';
+  }
+
+  if (!rows.length) {
+    $('list').innerHTML = '<div class="empty">' + (state.tab === 'open' ? '進行中の案件はありません' : '最近完了した案件はありません') + '</div>';
+    return;
+  }
+
+  var html = '';
+  if (who === '__all__' && state.tab === 'open') {
+    var order = d.members.slice(), groups = {};
+    rows.forEach(function (t) {
+      var o = t.owner || '(担当未設定)';
+      if (!groups[o]) { groups[o] = []; if (order.indexOf(o) === -1) order.push(o); }
+      groups[o].push(t);
+    });
+    order.forEach(function (o) {
+      if (!groups[o]) return;
+      html += '<div class="group-title">' + esc(o) + '(' + groups[o].length + ')</div>';
+      groups[o].forEach(function (t) { html += cardHtml(t, false); });
+    });
+  } else {
+    rows.forEach(function (t) { html += cardHtml(t, who === '__all__'); });
+  }
+  $('list').innerHTML = html;
+}
+
+function cardHtml(t, showOwner) {
+  var di = dueInfo(t);
+  var h = '<div class="card" data-id="' + esc(t.id) + '">';
+  h += '<div class="top"><div class="title">' + esc(t.title) + '</div><div class="id">' + esc(t.id) + '</div></div>';
+  h += '<div class="chips"><span class="chip st-' + esc(t.status) + '">' + esc(t.status) + '</span>';
+  h += '<span class="chip ' + di.cls + '">' + esc(di.text) + '</span>';
+  if (t.status === '待ち' && t.waiting) h += '<span class="chip">' + esc(t.waiting) + ' 待ち</span>';
+  if (showOwner) h += '<span class="chip">' + esc(t.owner || '担当未設定') + '</span>';
+  h += '</div>';
+  if (t.next && t.status !== '完了') h += '<div class="next"><b>次:</b>' + esc(t.next) + '</div>';
+  h += '<div class="meta">' + (t.status === '完了' && t.done ? '完了 ' + md(t.done) : (t.updated ? '更新 ' + md(t.updated) : '')) + '</div>';
+  return h + '</div>';
+}
+
+/* ---------- 編集シート ---------- */
+function setStatus(s) {
+  state.status = s;
+  var bs = $('fStatus').querySelectorAll('button');
+  for (var i = 0; i < bs.length; i++) bs[i].classList.toggle('on', bs[i].getAttribute('data-s') === s);
+  $('waitingWrap').classList.toggle('hidden', s !== '待ち' && !$('fWaiting').value);
+}
+
+function openSheet(task) {
+  state.editing = task || null;
+  var who = $('whoSel').value;
+  $('sheetTitle').textContent = task ? '案件を更新' : '新規登録';
+  $('fId').textContent = task ? task.id : '';
+  $('fTitle').value = task ? task.title : '';
+  $('fOwner').value = task ? task.owner : (who !== '__all__' ? who : '');
+  $('fDue').value = task ? task.due : '';
+  $('fWaiting').value = task ? task.waiting : '';
+  $('fNext').value = task ? task.next : '';
+  $('fNote').value = task ? task.note : '';
+  setStatus(task ? task.status : '未着手');
+  $('doneBtnWrap').classList.toggle('hidden', !task || task.status === '完了');
+  $('sheetWrap').classList.add('open');
+  if (!task) setTimeout(function () { $('fTitle').focus(); }, 50);
+}
+function closeSheet() { $('sheetWrap').classList.remove('open'); state.editing = null; }
+
+function collect() {
+  return {
+    title: $('fTitle').value.trim(),
+    owner: $('fOwner').value,
+    due: $('fDue').value,
+    status: state.status,
+    waiting: $('fWaiting').value.trim(),
+    next: $('fNext').value.trim(),
+    note: $('fNote').value.trim()
+  };
+}
+
+function save(forceStatus) {
+  if (state.sending) return;
+  var p = collect();
+  if (forceStatus) p.status = forceStatus;
+  if (!p.title) { toast('案件名を入力してください'); return; }
+  if (state.editing) { p.action = 'update'; p.id = state.editing.id; } else { p.action = 'create'; }
+
+  state.sending = true;
+  $('btnSave').disabled = true; $('btnDone').disabled = true;
+  postToGas(p, function (res) {
+    state.sending = false;
+    $('btnSave').disabled = false; $('btnDone').disabled = false;
+    if (res.ok === false) {
+      if (res.error === 'AUTH') { closeSheet(); showKeyBox(); return; }
+      toast('保存に失敗しました:' + res.error);
+      return;
+    }
+    closeSheet();
+    if (p.status === '完了') toast('完了にしました。お疲れ様でした!');
+    else toast(p.action === 'create' ? '登録しました' + (res.id ? '(' + res.id + ')' : '') : '更新しました');
+    setTimeout(function () { loadList(true); }, res.ok ? 200 : 1500);
+  });
+}
+
+/* ---------- 送信(隠しフォーム+iframe POST) ---------- */
+var pending = null;
+function postToGas(params, onDone) {
+  var reqId = 'r' + Date.now();
+  params.reqId = reqId;
+  params.key = store(STORE_KEY);
+  var form = document.createElement('form');
+  form.method = 'POST'; form.action = GAS_URL; form.target = 'gas_target'; form.style.display = 'none';
+  for (var k in params) {
+    if (!params.hasOwnProperty(k)) continue;
+    var input = document.createElement('input');
+    input.type = 'hidden'; input.name = k; input.value = params[k] == null ? '' : params[k];
+    form.appendChild(input);
+  }
+  document.body.appendChild(form);
+  pending = {
+    reqId: reqId, cb: onDone,
+    timer: setTimeout(function () { finish({ ok: null }); }, 12000) // 応答が取れなくても一覧の再読込で確認
+  };
+  form.submit();
+  document.body.removeChild(form);
+}
+function finish(res) {
+  if (!pending) return;
+  clearTimeout(pending.timer);
+  var cb = pending.cb; pending = null;
+  cb(res);
+}
+window.addEventListener('message', function (ev) {
+  var d = ev.data;
+  if (d && d.taskApp && pending && (!d.reqId || d.reqId === pending.reqId)) finish(d);
+});
+
+/* ---------- イベント ---------- */
+$('whoSel').addEventListener('change', function () { store(STORE_WHO, this.value); render(); });
+$('tabOpen').addEventListener('click', function () { state.tab = 'open'; this.classList.add('on'); $('tabDone').classList.remove('on'); render(); });
+$('tabDone').addEventListener('click', function () { state.tab = 'done'; this.classList.add('on'); $('tabOpen').classList.remove('on'); render(); });
+$('list').addEventListener('click', function (ev) {
+  var el = ev.target.closest ? ev.target.closest('.card') : null;
+  if (!el || !state.data) return;
+  var id = el.getAttribute('data-id');
+  for (var i = 0; i < state.data.tasks.length; i++) if (state.data.tasks[i].id === id) { openSheet(state.data.tasks[i]); return; }
+});
+$('fStatus').addEventListener('click', function (ev) { var s = ev.target.getAttribute && ev.target.getAttribute('data-s'); if (s) setStatus(s); });
+$('fabNew').addEventListener('click', function () { if (state.data) openSheet(null); });
+$('btnCancel').addEventListener('click', closeSheet);
+$('backdrop').addEventListener('click', closeSheet);
+$('btnSave').addEventListener('click', function () { save(); });
+$('btnDone').addEventListener('click', function () { save('完了'); });
+$('keySave').addEventListener('click', function () {
+  var v = $('keyInput').value.trim(); if (!v) return;
+  store(STORE_KEY, v); $('keyInput').value = ''; $('keyBox').classList.add('hidden'); loadList();
+});
+
+loadList();
+</script>
+</body>
+</html>
